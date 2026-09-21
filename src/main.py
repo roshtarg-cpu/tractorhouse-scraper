@@ -54,14 +54,18 @@ async def main():
         
         proxy_settings = None
         if proxy_config.get('useApifyProxy'):
-            proxy_url = Actor.create_proxy_url()
-            parsed = urlparse(proxy_url)
-            proxy_settings = {
-                'server': f"{parsed.scheme}://{parsed.hostname}:{parsed.port}",
-                'username': parsed.username,
-                'password': parsed.password
-            }
-            Actor.log.info(f"Using Apify proxy: {proxy_settings['server']}")
+            # Apify SDK v1 proxy setup
+            import os
+            proxy_password = os.getenv('APIFY_PROXY_PASSWORD')
+            if proxy_password:
+                proxy_settings = {
+                    'server': 'http://proxy.apify.com:8000',
+                    'username': 'auto',
+                    'password': proxy_password
+                }
+                Actor.log.info("Using Apify proxy")
+            else:
+                Actor.log.warning("Apify proxy requested but APIFY_PROXY_PASSWORD not set")
         
         browser = await playwright.chromium.launch(
             headless=True,
