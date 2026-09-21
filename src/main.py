@@ -1,11 +1,12 @@
 """
-TractorHouse.com Farm Equipment Scraper
-Scrapes farm equipment listings with detailed specs and pricing
+Updated TractorHouse.com scraper with corrected selectors
+Based on analysis of actual page structure
 """
-from apify import Actor, Request
+from apify import Actor
 from playwright.async_api import async_playwright
 import re
-from urllib.parse import urljoin, urlparse, parse_qs, urlencode, urlunparse
+from urllib.parse import urljoin, urlparse
+from datetime import datetime, timezone
 
 async def main():
     async with Actor:
@@ -16,17 +17,6 @@ async def main():
         search_mode = actor_input.get('searchMode', 'filters')
         start_url = actor_input.get('startUrl', '')
         category = actor_input.get('category', 'tractors')
-        manufacturer = actor_input.get('manufacturer', '')
-        condition = actor_input.get('condition', 'all')
-        year_min = actor_input.get('yearMin')
-        year_max = actor_input.get('yearMax')
-        price_min = actor_input.get('priceMin')
-        price_max = actor_input.get('priceMax')
-        location = actor_input.get('location', '')
-        zip_code = actor_input.get('zipCode', '')
-        search_radius = actor_input.get('searchRadius', 100)
-        hp_min = actor_input.get('horsepowerMin')
-        hp_max = actor_input.get('horsepowerMax')
         max_results = actor_input.get('maxResults', 100)
         proxy_config = actor_input.get('proxyConfiguration', {'useApifyProxy': True})
         
@@ -71,6 +61,7 @@ async def main():
                 'username': parsed.username,
                 'password': parsed.password
             }
+            Actor.log.info(f"Using Apify proxy: {proxy_settings['server']}")
         
         browser = await playwright.chromium.launch(
             headless=True,
@@ -79,7 +70,7 @@ async def main():
         
         context = await browser.new_context(
             viewport={'width': 1920, 'height': 1080},
-            user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         )
         
         page = await context.new_page()
@@ -92,78 +83,159 @@ async def main():
                 current_url = f"{search_url}?p={page_num}"
                 Actor.log.info(f"Scraping page {page_num}: {current_url}")
                 
-                await page.goto(current_url, wait_until='networkidle', timeout=60000)
-                await page.wait_for_timeout(2000)
+                # Load page with extended timeout for Cloudflare
+                try:
+                    await page.goto(current_url, wait_until='domcontentloaded', timeout=90000)
+                    Actor.log.info("Page loaded, waiting for content...")
+                    
+                    # Wait longer for JavaScript and Cloudflare bypass
+                    await page.wait_for_timeout(10000)
+                    
+                    # Check if we're on Cloudflare challenge page
+                    page_title = await page.title()
+                    if "Just a moment" in page_title or "challenge" in page_title.lower():
+                        Actor.log.warning("Cloudflare challenge detected, waiting longer...")
+                        await page.wait_for_timeout(15000)
+                    
+                except Exception as e:
+                    Actor.log.error(f"Error loading page: {e}")
+                    break
                 
-                # Extract listings
+                # Try multiple selector strategies
+                listings = []
+                
+                # Strategy 1: Look for elements with listing data attributes
                 listings = await page.query_selector_all('[data-listing-id]')
+                Actor.log.info(f"Strategy 1 ([data-listing-id]): {len(listings)} elements")
+                
+                # Strategy 2: Look for article tags
+                if not listings:
+                    listings = await page.query_selector_all('article')
+                    Actor.log.info(f"Strategy 2 (article): {len(listings)} elements")
+                
+                # Strategy 3: Look for divs with listing classes
+                if not listings:
+                    for selector in ['.listing-item', '.result-item', '[class*="listing"]', '[class*="result"]']:
+                        listings = await page.query_selector_all(selector)
+                        if listings:
+                            Actor.log.info(f"Strategy 3 ({selector}): {len(listings)} elements")
+                            break
+                
+                # Strategy 4: Find by heading pattern (h2, h3 with year)
+                if not listings:
+                    Actor.log.info("Trying headings strategy...")
+                    headings = await page.query_selector_all('h2, h3')
+                    containers = []
+                    for heading in headings:
+                        text = await heading.text_content()
+                        if text and re.search(r'20\d{2}', text):  # Has a year
+                            # Get parent container
+                            container = await heading.evaluate_handle('el => el.closest("div, article, section")')
+                            if container:
+                                containers.append(container.as_element())
+                    listings = containers
+                    Actor.log.info(f"Strategy 4 (heading pattern): {len(listings)} elements")
                 
                 if not listings:
-                    Actor.log.info("No more listings found")
+                    Actor.log.warning("No listings found with any strategy")
+                    # Save screenshot and HTML for debugging
+                    await page.screenshot(path='no_listings_debug.png')
+                    html = await page.content()
+                    with open('no_listings_debug.html', 'w') as f:
+                        f.write(html)
+                    Actor.log.info("Debug files saved")
                     break
                 
                 Actor.log.info(f"Found {len(listings)} listings on page {page_num}")
                 
-                for listing in listings:
+                for idx, listing in enumerate(listings):
                     if results_count >= max_results:
                         break
                     
                     try:
-                        # Extract listing data
-                        title_elem = await listing.query_selector('h3.listing-title, h2.listing-title, .title a')
-                        title = await title_elem.inner_text() if title_elem else 'N/A'
-                        title = title.strip()
+                        # Extract listing data with multiple fallback selectors
+                        # Title - try multiple selectors
+                        title = ''
+                        for selector in ['h2', 'h3', 'h4', '.title', '[class*="title"]']:
+                            title_elem = await listing.query_selector(selector)
+                            if title_elem:
+                                title = await title_elem.inner_text()
+                                title = title.strip()
+                                if title and len(title) > 5:
+                                    break
                         
-                        # Get URL
-                        link_elem = await listing.query_selector('a[href*="/listings/"]')
+                        if not title:
+                            Actor.log.warning(f"No title found for listing {idx}")
+                            continue
+                        
+                        # Get URL - look for any link with /listing/ in href
+                        link_elem = await listing.query_selector('a[href*="/listing/"]')
                         relative_url = await link_elem.get_attribute('href') if link_elem else ''
                         url = urljoin('https://www.tractorhouse.com', relative_url) if relative_url else ''
                         
-                        # Price
-                        price_elem = await listing.query_selector('.price, [class*="price"], .listing-price')
-                        price_text = await price_elem.inner_text() if price_elem else ''
-                        price = price_text.strip()
+                        # Price - look for USD $ pattern
+                        price = ''
+                        listing_text = await listing.inner_text()
+                        price_match = re.search(r'USD \$[\d,]+', listing_text)
+                        if price_match:
+                            price = price_match.group(0)
+                        else:
+                            # Try other price patterns
+                            price_match = re.search(r'\$[\d,]+', listing_text)
+                            if price_match:
+                                price = price_match.group(0)
                         
-                        # Location
-                        location_elem = await listing.query_selector('.location, [class*="location"]')
-                        location_text = await location_elem.inner_text() if location_elem else ''
-                        location = location_text.strip()
+                        # Location - look for "Location:" pattern
+                        location = ''
+                        location_match = re.search(r'Location:\s*([^\n]+)', listing_text)
+                        if location_match:
+                            location = location_match.group(1).strip()
+                        else:
+                            # Try finding location elements
+                            for selector in ['.location', '[class*="location"]', 'span:has-text("Location")']:
+                                try:
+                                    loc_elem = await listing.query_selector(selector)
+                                    if loc_elem:
+                                        location = await loc_elem.inner_text()
+                                        location = location.replace('Location:', '').strip()
+                                        if location:
+                                            break
+                                except:
+                                    pass
                         
-                        # Manufacturer & Model
+                        # Manufacturer & Model from title
                         mfr_model = title.split(' ', 1)
                         mfr = mfr_model[0] if len(mfr_model) > 0 else ''
                         model = mfr_model[1] if len(mfr_model) > 1 else ''
                         
-                        # Additional details (year, hours, etc.)
-                        details_elem = await listing.query_selector('.listing-details, .specs, [class*="detail"]')
-                        details_text = await details_elem.inner_text() if details_elem else ''
-                        
-                        # Parse year
-                        year_match = re.search(r'\b(19|20)\d{2}\b', details_text)
+                        # Parse year from title or text
+                        year_match = re.search(r'\b(19|20)\d{2}\b', title)
                         year = year_match.group(0) if year_match else ''
                         
                         # Parse hours
-                        hours_match = re.search(r'(\d{1,6})\s*(hrs?|hours)', details_text, re.IGNORECASE)
+                        hours_match = re.search(r'Hours:\s*([\d,]+)', listing_text)
                         hours = hours_match.group(1) if hours_match else ''
                         
                         # Parse horsepower
-                        hp_match = re.search(r'(\d{1,4})\s*HP', details_text, re.IGNORECASE)
+                        hp_match = re.search(r'(\d{1,4})\s*HP', listing_text, re.IGNORECASE)
                         horsepower = hp_match.group(1) if hp_match else ''
                         
                         # Condition
                         cond = 'Used'
-                        if 'new' in title.lower() or 'new' in details_text.lower():
+                        if 'Condition: New' in listing_text or re.search(r'\bNew\b', title):
                             cond = 'New'
                         
                         # Seller
-                        seller_elem = await listing.query_selector('.dealer-name, .seller-name, [class*="seller"]')
-                        seller = await seller_elem.inner_text() if seller_elem else ''
-                        seller = seller.strip()
+                        seller = ''
+                        seller_match = re.search(r'Seller:\s*([^\n]+)', listing_text)
+                        if seller_match:
+                            seller = seller_match.group(1).strip()
                         
                         # Stock number
-                        stock_elem = await listing.query_selector('.stock-number, [class*="stock"]')
-                        stock = await stock_elem.inner_text() if stock_elem else ''
-                        stock = stock.strip()
+                        stock = ''
+                        stock_match = re.search(r'Stock Number:\s*([^\n]+)', listing_text)
+                        if stock_match:
+                            stock = stock_match.group(1).strip()
                         
                         item = {
                             'title': title,
@@ -179,9 +251,10 @@ async def main():
                             'seller': seller,
                             'stockNumber': stock,
                             'category': category,
-                            'scrapedAt': Actor.now().isoformat()
+                            'scrapedAt': datetime.now(timezone.utc).isoformat()
                         }
                         
+                        Actor.log.info(f"Scraped: {title} - {price} - {location}")
                         await Actor.push_data(item)
                         results_count += 1
                         
@@ -189,18 +262,26 @@ async def main():
                             Actor.log.info(f"Scraped {results_count}/{max_results} listings")
                     
                     except Exception as e:
-                        Actor.log.warning(f"Error extracting listing: {e}")
+                        Actor.log.warning(f"Error extracting listing {idx}: {e}")
                         continue
                 
                 # Check for next page
                 if results_count >= max_results:
                     break
                 
+                # If we got no results, don't continue
+                if len(listings) == 0:
+                    break
+                
                 page_num += 1
-                await page.wait_for_timeout(1500)
+                await page.wait_for_timeout(2000)
         
         finally:
             await browser.close()
             await playwright.stop()
         
         Actor.log.info(f"Scraping completed. Total items: {results_count}")
+
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(main())

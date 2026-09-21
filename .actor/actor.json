@@ -2,7 +2,7 @@
   "actorSpecification": 1,
   "name": "tractorhouse-scraper",
   "title": "TractorHouse Scraper — Farm Equipment Listings & Prices",
-  "version": "1.0.0",
+  "version": "1.0",
   "buildTag": "latest",
   "environmentVariables": {},
   "dockerfile": "./Dockerfile",
