@@ -1,92 +1,62 @@
 {
   "actorOutputSchemaVersion": 1,
-  "title": "TractorHouse Listing",
   "type": "object",
-  "schemaVersion": 1,
   "properties": {
     "title": {
-      "title": "Title",
       "type": "string",
-      "description": "Equipment listing title",
-      "editor": "textfield"
+      "template": "Title: {{title}}"
     },
     "url": {
-      "title": "URL",
       "type": "string",
-      "description": "Direct link to listing",
-      "editor": "textfield"
+      "template": "URL: {{url}}"
     },
     "price": {
-      "title": "Price",
       "type": "string",
-      "description": "Listed price (USD)",
-      "editor": "textfield"
+      "template": "Price: {{price}}"
     },
     "manufacturer": {
-      "title": "Manufacturer",
       "type": "string",
-      "description": "Equipment manufacturer/brand",
-      "editor": "textfield"
+      "template": "Manufacturer: {{manufacturer}}"
     },
     "model": {
-      "title": "Model",
       "type": "string",
-      "description": "Equipment model",
-      "editor": "textfield"
+      "template": "Model: {{model}}"
     },
     "year": {
-      "title": "Year",
       "type": "string",
-      "description": "Manufacturing year",
-      "editor": "textfield"
+      "template": "Year: {{year}}"
     },
     "hours": {
-      "title": "Hours",
       "type": "string",
-      "description": "Engine/usage hours",
-      "editor": "textfield"
+      "template": "Hours: {{hours}}"
     },
     "horsepower": {
-      "title": "Horsepower",
       "type": "string",
-      "description": "Engine horsepower",
-      "editor": "textfield"
+      "template": "HP: {{horsepower}}"
     },
     "condition": {
-      "title": "Condition",
       "type": "string",
-      "description": "New or Used",
-      "editor": "textfield"
+      "template": "Condition: {{condition}}"
     },
     "location": {
-      "title": "Location",
       "type": "string",
-      "description": "Equipment location (city, state)",
-      "editor": "textfield"
+      "template": "Location: {{location}}"
     },
     "seller": {
-      "title": "Seller",
       "type": "string",
-      "description": "Dealership or seller name",
-      "editor": "textfield"
+      "template": "Seller: {{seller}}"
     },
     "stockNumber": {
-      "title": "Stock Number",
       "type": "string",
-      "description": "Stock/inventory number",
-      "editor": "textfield"
+      "template": "Stock: {{stockNumber}}"
     },
     "category": {
-      "title": "Category",
       "type": "string",
-      "description": "Equipment category",
-      "editor": "textfield"
+      "template": "Category: {{category}}"
     },
     "scrapedAt": {
-      "title": "Scraped At",
       "type": "string",
-      "description": "Extraction timestamp (ISO 8601)",
-      "editor": "textfield"
+      "template": "Scraped: {{scrapedAt}}"
     }
   }
 }
