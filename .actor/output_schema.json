@@ -1,4 +1,5 @@
 {
+  "actorOutputSchemaVersion": 1,
   "title": "TractorHouse Listing",
   "type": "object",
   "schemaVersion": 1,
