@@ -1,0 +1,168 @@
+{
+  "title": "TractorHouse Scraper Input",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "searchMode": {
+      "title": "Search Mode",
+      "type": "string",
+      "description": "Choose how to search: provide a direct listing URL, or use category/filter search",
+      "default": "filters",
+      "enum": ["url", "filters"],
+      "enumTitles": ["Direct URL", "Category & Filters"],
+      "editor": "select"
+    },
+    "startUrl": {
+      "title": "TractorHouse URL",
+      "type": "string",
+      "description": "Direct URL from TractorHouse.com search results or category page (e.g., https://www.tractorhouse.com/listings/farm-equipment/for-sale/list/category/1092/tractors)",
+      "editor": "textfield",
+      "prefill": "https://www.tractorhouse.com/listings/farm-equipment/for-sale/list/category/1092/tractors"
+    },
+    "category": {
+      "title": "Equipment Category",
+      "type": "string",
+      "description": "Primary equipment category to scrape",
+      "default": "tractors",
+      "enum": [
+        "tractors",
+        "combines",
+        "headers",
+        "planters",
+        "grain-drills",
+        "sprayers",
+        "tillage",
+        "hay-forage",
+        "harvesting",
+        "loaders",
+        "skid-steers",
+        "utility-vehicles",
+        "trailers",
+        "other"
+      ],
+      "enumTitles": [
+        "Tractors",
+        "Combines",
+        "Headers & Platforms",
+        "Planters & Seeders",
+        "Grain Drills",
+        "Sprayers & Applicators",
+        "Tillage Equipment",
+        "Hay & Forage Equipment",
+        "Harvesting Equipment",
+        "Loaders & Attachments",
+        "Skid Steers",
+        "Utility Vehicles",
+        "Trailers",
+        "Other Equipment"
+      ],
+      "editor": "select"
+    },
+    "manufacturer": {
+      "title": "Manufacturer/Brand",
+      "type": "string",
+      "description": "Filter by equipment manufacturer (leave empty for all brands)",
+      "editor": "textfield",
+      "example": "John Deere, Case IH, New Holland, Kubota, Massey Ferguson"
+    },
+    "condition": {
+      "title": "Equipment Condition",
+      "type": "string",
+      "description": "Filter by equipment condition",
+      "default": "all",
+      "enum": ["all", "new", "used"],
+      "enumTitles": ["All Conditions", "New Only", "Used Only"],
+      "editor": "select"
+    },
+    "yearMin": {
+      "title": "Minimum Year",
+      "type": "integer",
+      "description": "Minimum manufacturing year (leave empty for no minimum)",
+      "editor": "number",
+      "example": 2010,
+      "minimum": 1950,
+      "maximum": 2027
+    },
+    "yearMax": {
+      "title": "Maximum Year",
+      "type": "integer",
+      "description": "Maximum manufacturing year (leave empty for no maximum)",
+      "editor": "number",
+      "example": 2024,
+      "minimum": 1950,
+      "maximum": 2027
+    },
+    "priceMin": {
+      "title": "Minimum Price (USD)",
+      "type": "integer",
+      "description": "Minimum price in USD (leave empty for no minimum)",
+      "editor": "number",
+      "example": 5000
+    },
+    "priceMax": {
+      "title": "Maximum Price (USD)",
+      "type": "integer",
+      "description": "Maximum price in USD (leave empty for no maximum)",
+      "editor": "number",
+      "example": 100000
+    },
+    "location": {
+      "title": "Location (State/Province)",
+      "type": "string",
+      "description": "Filter by US state or Canadian province (e.g., Iowa, Nebraska, Ontario)",
+      "editor": "textfield",
+      "example": "Iowa, Nebraska, Kansas, Ontario"
+    },
+    "zipCode": {
+      "title": "Zip/Postal Code",
+      "type": "string",
+      "description": "Search near a specific zip or postal code",
+      "editor": "textfield",
+      "example": "50309"
+    },
+    "searchRadius": {
+      "title": "Search Radius (miles)",
+      "type": "integer",
+      "description": "Search radius from zip code in miles (requires zipCode)",
+      "editor": "number",
+      "default": 100,
+      "minimum": 10,
+      "maximum": 1000
+    },
+    "horsepowerMin": {
+      "title": "Minimum Horsepower",
+      "type": "integer",
+      "description": "Minimum horsepower (for tractors and powered equipment)",
+      "editor": "number",
+      "example": 50
+    },
+    "horsepowerMax": {
+      "title": "Maximum Horsepower",
+      "type": "integer",
+      "description": "Maximum horsepower (for tractors and powered equipment)",
+      "editor": "number",
+      "example": 300
+    },
+    "maxResults": {
+      "title": "Maximum Results",
+      "type": "integer",
+      "description": "Maximum number of listings to scrape",
+      "editor": "number",
+      "default": 100,
+      "minimum": 1,
+      "maximum": 10000,
+      "prefill": 3
+    },
+    "proxyConfiguration": {
+      "title": "Proxy Configuration",
+      "type": "object",
+      "description": "Proxy settings for the scraper",
+      "editor": "proxy",
+      "prefill": {
+        "useApifyProxy": true,
+        "apifyProxyGroups": ["RESIDENTIAL"]
+      }
+    }
+  },
+  "required": ["searchMode", "maxResults"]
+}

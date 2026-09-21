@@ -1,0 +1,52 @@
+{
+  "actorSpecification": 1,
+  "name": "tractorhouse-scraper",
+  "title": "TractorHouse Scraper — Farm Equipment Listings & Prices",
+  "version": "1.0.0",
+  "buildTag": "latest",
+  "environmentVariables": {},
+  "dockerfile": "./Dockerfile",
+  "readme": "./README.md",
+  "input": "./input_schema.json",
+  "storages": {
+    "dataset": {
+      "actorSpecification": 1,
+      "title": "TractorHouse Listings",
+      "views": {
+        "overview": {
+          "title": "Overview",
+          "transformation": {
+            "fields": [
+              "title",
+              "price",
+              "location",
+              "manufacturer",
+              "model",
+              "year",
+              "hours",
+              "condition",
+              "url"
+            ]
+          },
+          "display": {
+            "component": "table",
+            "properties": {
+              "title": {
+                "label": "Title",
+                "format": "text"
+              },
+              "price": {
+                "label": "Price",
+                "format": "text"
+              },
+              "location": {
+                "label": "Location",
+                "format": "text"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
