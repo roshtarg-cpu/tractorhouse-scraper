@@ -99,7 +99,11 @@ async def main():
                     page_title = await page.title()
                     if "Just a moment" in page_title or "challenge" in page_title.lower():
                         Actor.log.warning("Cloudflare challenge detected, waiting longer...")
-                        await page.wait_for_timeout(15000)
+                        await page.wait_for_timeout(25000)  # Increased to 25s
+                        
+                        # Reload page after Cloudflare bypass
+                        await page.reload(wait_until='networkidle', timeout=60000)
+                        await page.wait_for_timeout(5000)
                     
                 except Exception as e:
                     Actor.log.error(f"Error loading page: {e}")
