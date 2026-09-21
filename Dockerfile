@@ -1,17 +1,11 @@
-FROM apify/actor-python:3.11
+FROM mcr.microsoft.com/playwright/python:v1.40.0-jammy
 
-# Install Playwright and Chromium
-RUN pip install --no-cache-dir playwright==1.40.0
-
-# Install Chromium browser
-RUN playwright install chromium
-
-# Install system dependencies for Chromium
-RUN playwright install-deps chromium
-
-COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+# Install Apify SDK
+RUN pip install --no-cache-dir apify~=1.6.0
 
 COPY . ./
+
+# Set working directory
+WORKDIR /usr/src/app
 
 CMD ["python", "-m", "src.main"]
